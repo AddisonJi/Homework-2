@@ -1,0 +1,180 @@
+'I sorted the ticker and the date from A-Z, smallest to largest before run this
+Sub homework2()
+
+'dim the worksheet for the later loop thru
+Dim ws As Worksheet
+
+'dim all the columns of the summary table
+Dim ticker, tickervol, yearchange, percentchange As Integer
+    ticker = 9
+    yearchange = 10
+    percentchange = 11
+    tickervol = 12
+    
+Dim i, Row As Integer
+Dim openp, closep, yearchangen As Long
+
+
+'for each current active worksheet
+For Each ws In Worksheets
+'set up the table header for each worksheet
+    ws.Cells(1, ticker) = "Ticker"
+    ws.Cells(1, yearchange) = "Yearly Change"
+    ws.Cells(1, percentchange) = "Percent Change"
+    ws.Cells(1, tickervol) = "Total Stock Volume"
+
+'First generate the ticker list, unique list of the ticker name
+'For loop scan the first column, if ticker name change then throw it to the output table
+    lastrow = ws.Cells(Rows.Count, 1).End(xlUp).Row
+    Row = 2
+        
+    For i = 2 To lastrow
+        
+        If Trim(ws.Cells(i, 1)) <> Trim(ws.Cells(i - 1, 1)) Then
+            ws.Cells(Row, ticker) = Trim(ws.Cells(i, 1).value)
+            Row = Row + 1
+        End If
+            
+    Next i
+
+    Row = 2
+    i = 2
+    
+    'calculate the total based on the ticker name
+    Do While ws.Cells(Row, ticker) <> "" And ws.Cells(i, 1) <> ""
+        If Trim(ws.Cells(Row, ticker)) = Trim(ws.Cells(i, 1)) Then
+            ws.Cells(Row, tickervol) = ws.Cells(Row, tickervol) + Cells(i, 7)
+            'because I know the columnA is sorted,so if it moves to the next ticker, don't have to loop from the top, if we don't have this assumption, then it has to loop from the top
+            i = i + 1
+        Else
+            Row = Row + 1
+        End If
+    Loop
+
+'-------------------------------------------------------------------------------------------above is the "Easy" part and below is the moderate part------------------------------------------------------------------------'
+'the tricky part of this assignment is the ticker PLNT, it can start the open price in the middle of the year or have no price throught out the year
+'my Macro is trying to find where it will start and then if it have all 0s in a year then put 0 in all column
+
+    i = 2
+    Row = 2
+    
+    'The code is trying to grab open and close price and then do the calculation
+    'loop start from second row and intial value is the open price of the first one
+    
+    openp = ws.Cells(2, 3)
+    
+    'Loop will stop when both tables are to their last line
+    
+    Do While ws.Cells(Row, ticker) <> "" And ws.Cells(i, 1) <> ""
+    
+    'if the column A is changing value, means the last row of the ticker is reached,since i already sorted the date, the last row of each ticker is the close date
+    
+            If ws.Cells(i, 1) <> ws.Cells(i + 1, 1) Then
+               closep = ws.Cells(i, 6)
+                
+    'normally a ticker will have a close and open price, therefore the changes can be calculated
+    
+                If closep <> 0 And openp <> 0 Then
+                    yearchangen = closep - openp
+                    
+                    'then go to the table beside and put in the value, since I know the table just created follows the same order as the raw data,so I didn't write a loop.
+                    
+                    If Trim(ws.Cells(i, 1)) = Trim(ws.Cells(Row, ticker)) Then
+                        ws.Cells(Row, yearchange) = yearchangen
+                        ws.Cells(Row, percentchange) = yearchangen / openp
+                        ws.Cells(Row, percentchange).NumberFormat = "0.00%"
+                        
+                        If ws.Cells(Row, yearchange) < 0 Then
+                           ws.Cells(Row, yearchange).Interior.Color = vbRed
+                        Else
+                           ws.Cells(Row, yearchange).Interior.Color = vbGreen
+                        End If
+                        
+                        'once a ticker is done in the output table,output table move to the next ticker
+                        
+                        Row = Row + 1
+                    End If
+                Else
+                'if both close and open price is 0, this is refers to the PLNT in 2014 doesn't have any value,need to treat seperately
+                    ws.Cells(Row, yearchange) = 0
+                    ws.Cells(Row, yearchange).Interior.Color = vbGreen
+                    ws.Cells(Row, percentchange) = 0
+                    ws.Cells(Row, percentchange).NumberFormat = "0.00%"
+                    ws.Cells(Row, percentchange) = 0
+                    Row = Row + 1
+                End If
+                'if reach the last row of a ticker, the next row is the open price for the next one, however if the next ticker have open price as 0 until the middle of the year then see else
+                    openp = ws.Cells(i + 1, 3)
+                    i = i + 1
+            Else
+                'if the ticker has 0 open price until the middle of the year means it doesn't listed until then, using the below formula, I can make sure I captured the first value next to the last 0
+                    If openp = 0 Then
+                    openp = openp + ws.Cells(i + 1, 3)
+                'see if the open value got captured, this if statement will be skiped, so the open price will be stored
+                    End If
+                i = i + 1
+            End If
+        'End If
+    Loop
+    Next ws
+    End Sub
+
+
+'-----------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+'this is the hard part, need to be executed after the above Macro
+    Sub hardpart()
+    
+    Dim ws As Worksheet
+    Dim ticker, value, header As Integer
+    
+    'create the table
+    header = 15
+    ticker = 16
+    value = 17
+    
+    For Each ws In Worksheets
+        ws.Cells(2, header) = "Greatest % Increase"
+        ws.Cells(3, header) = "Greatest % Decrease"
+        ws.Cells(4, header) = "Greatest Total Volume"
+        ws.Cells(1, ticker) = "Ticker"
+        ws.Cells(1, value) = "Value"
+        
+        i = 2
+        GI = ws.Cells(i, 11)
+        GD = ws.Cells(i, 11)
+        GV = ws.Cells(i, 12)
+        Do While ws.Cells(i, 9) <> ""
+    
+            If ws.Cells(i, 11) > GI Then
+                GI = ws.Cells(i, 11)
+                NameGI = ws.Cells(i, 9)
+            End If
+            
+            If ws.Cells(i, 11) < GD Then
+                GD = ws.Cells(i, 11)
+                NameGD = ws.Cells(i, 9)
+            End If
+            
+            If ws.Cells(i, 12) > GV Then
+                GV = ws.Cells(i, 12)
+                NameGV = ws.Cells(i, 9)
+            End If
+            
+        i = i + 1
+        Loop
+        
+        ws.Cells(2, value) = GI
+        ws.Cells(2, ticker) = NameGI
+        ws.Cells(2, value).NumberFormat = "0.00%"
+        
+        ws.Cells(3, value) = GD
+        ws.Cells(3, ticker) = NameGD
+        ws.Cells(3, value).NumberFormat = "0.00%"
+      
+        ws.Cells(4, value) = GV
+        ws.Cells(4, ticker) = NameGV
+    
+Next ws
+End Sub
